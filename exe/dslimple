@@ -1,3 +1,4 @@
 #!/usr/bin/env ruby
 
-require 'dslimple'
+require 'dslimple/cli'
+Dslimple::CLI.start(ARGV)
