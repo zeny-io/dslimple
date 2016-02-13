@@ -48,14 +48,6 @@ class Dslimple::CLI < Thor
     rescue_from(e)
   end
 
-  desc 'whoami', 'Show your user informaion'
-  def whoami
-    user = api_client.users.user
-    say(user.email)
-  rescue => e
-    rescue_from(e)
-  end
-
   private
 
   def api_client
