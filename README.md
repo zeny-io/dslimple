@@ -1,8 +1,8 @@
-# Dslimple
+# DSLimple
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/dslimple`. To experiment with that code, run `bin/console` for an interactive prompt.
+__DSLimple__ is a tool to manage [DNSimple](https://dnsimple.com/).
 
-TODO: Delete this and the text above, and describe your gem
+It defines the state of DNSimple using DSL, and updates DNSimple according to DSL.
 
 ## Installation
 
@@ -22,17 +22,129 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+```shell
+export DLSIMPLE_EMAIL="..."
+export DLSIMPLE_API_TOKEN="..."
+dslimple export -f Domainfile
+vi Domainfile
+dslimple apply --dry-run -f Domainfile
+dslimple apply --yes -f Domainfile
+```
 
-## Development
+### Help
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment. Run `bundle exec dslimple` to use the gem in this directory, ignoring other installed copies of this gem.
+```
+$ dslimple help
+Commands:
+  dslimple apply           # Apply domain specifications
+  dslimple export          # Export domain specifications
+  dslimple help [COMMAND]  # Describe available commands or one specific command
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+Options:
+  -e, [--email=EMAIL]                 # Your E-Mail address
+  -t, [--api-token=API_TOKEN]         # Your API token
+  -dt, [--domain-token=DOMAIN_TOKEN]  # Your Domain API token
+      [--sandbox], [--no-sandbox]     # Use sandbox API(at sandbox.dnsimple.com)
+                                      # Default: true
+      [--debug], [--no-debug]
+```
+
+#### help apply
+
+```
+$ dslimple help apply
+Usage:
+  dslimple apply
+
+Options:
+  -o, [--only=one two three]                 # Specify domains for apply
+  -d, [--dry-run], [--no-dry-run]
+  -f, [--file=FILE]                          # Source Domainfile path
+                                             # Default: Domainfile
+      [--addition], [--no-addition]          # Add specified records
+                                             # Default: true
+      [--modification], [--no-modification]  # Modify specified records
+                                             # Default: true
+      [--deletion], [--no-deletion]          # Delete unspecified records
+                                             # Default: true
+  -y, [--yes], [--no-yes]                    # Do not confirm on before apply
+  -e, [--email=EMAIL]                        # Your E-Mail address
+  -t, [--api-token=API_TOKEN]                # Your API token
+  -dt, [--domain-token=DOMAIN_TOKEN]         # Your Domain API token
+      [--sandbox], [--no-sandbox]            # Use sandbox API(at sandbox.dnsimple.com)
+                                             # Default: true
+      [--debug], [--no-debug]
+
+Apply domain specifications
+```
+
+#### help export
+
+```
+$ dslimple help export
+Usage:
+  dslimple export
+
+Options:
+  -o, [--only=one two three]             # Specify domains for export
+  -f, [--file=FILE]                      # Export Domainfile path
+                                         # Default: Domainfile
+  -d, [--dir=DIR]                        # Export directory path for split
+                                         # Default: ./domainfiles
+  -s, [--split], [--no-split]            # Export with split by domains
+  -m, [--modeline], [--no-modeline]      # Export with modeline for Vim
+      [--soa-and-ns], [--no-soa-and-ns]  # Export without SOA and NS records
+  -e, [--email=EMAIL]                    # Your E-Mail address
+  -t, [--api-token=API_TOKEN]            # Your API token
+  -dt, [--domain-token=DOMAIN_TOKEN]     # Your Domain API token
+      [--sandbox], [--no-sandbox]        # Use sandbox API(at sandbox.dnsimple.com)
+                                         # Default: true
+      [--debug], [--no-debug]
+
+Export domain specifications
+```
+
+## Domainfile Examples
+
+### Basic
+
+The following defines are all the same meaning
+
+```ruby
+domain "example.com" do
+  a_record ttl: 3600 do
+    "0.0.0.0"
+  end
+
+  record type: :a, ttl: 3600 do
+    "0.0.0.0"
+  end
+
+  a_record do
+    ttl 3600
+    content "0.0.0.0"
+  end
+end
+```
+
+### Dynamic
+
+DSLimple's DSL works on ruby.
+
+```ruby
+require 'open-uri'
+require 'json'
+
+domain "example.internal" do
+  JSON.parse(open('http://my.internal.service/records.json', &:read)).each do |record_data|
+    recored record_data['name'], record_data['options'] { record_data['content'] }
+  end
+end
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/dslimple.
+Bug reports and pull requests are welcome on GitHub at https://github.com/zeny-io/dslimple.
 
 
 ## License
