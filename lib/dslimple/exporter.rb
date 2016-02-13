@@ -11,8 +11,7 @@ class Dslimple::Exporter
   end
 
   def execute
-    fetch_domains
-    domains.select! { |domain| options[:only].include?(domain.name) } unless options[:only].empty?
+    @domains = fetch_domains
 
     if options[:split] && options[:dir]
       split_export(options[:dir], options[:file])
@@ -22,8 +21,10 @@ class Dslimple::Exporter
   end
 
   def fetch_domains
-    @domains = api_client.domains.list.map { |domain| Dslimple::Domain.new(domain.name, api_client) }
+    domains = api_client.domains.list.map { |domain| Dslimple::Domain.new(domain.name, api_client) }
     domains.each(&:fetch_records!)
+    domains.select! { |domain| options[:only].include?(domain.name) } unless options[:only].empty?
+    domains
   end
 
   def export(file, export_domains)

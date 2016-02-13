@@ -1,7 +1,11 @@
 require 'dslimple/version'
 require 'dslimple/domain'
 require 'dslimple/record'
+require 'dslimple/dsl'
+require 'dslimple/query'
+require 'dslimple/query_builder'
 require 'dslimple/exporter'
+require 'dslimple/applier'
 
 module Dslimple
   ESCAPE_SINGLE_QUOTE_REGEXP = /[^\\]'/

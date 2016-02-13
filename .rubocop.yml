@@ -12,6 +12,9 @@ Style/Alias:
 Style/ClassAndModuleChildren:
   EnforcedStyle: compact
 
+Style/CaseEquality:
+  Enabled: false
+
 Style/Documentation:
   Enabled: false
 

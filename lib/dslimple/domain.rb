@@ -1,10 +1,12 @@
 require 'dslimple'
 
 class Dslimple::Domain
-  attr_reader :name, :records, :api_client
+  attr_reader :name, :id
+  attr_accessor :api_client, :records
 
-  def initialize(name, api_client)
+  def initialize(name, api_client, options = {})
     @name = name
+    @id = options[:id]
     @api_client = api_client
     @records = []
   end
@@ -19,7 +21,7 @@ class Dslimple::Domain
 
   def fetch_records
     api_client.domains.records(name).map do |record|
-      Dslimple::Record.new(self, record.record_type, record.name, record.content, ttl: record.ttl, priority: record.priority)
+      Dslimple::Record.new(self, record.record_type, record.name, record.content, ttl: record.ttl, priority: record.priority, id: record.id)
     end
   end
 
@@ -31,6 +33,11 @@ class Dslimple::Domain
   def cleanup_records!
     @records = Dslimple::Record.cleanup_records(records)
   end
+
+  def ==(other)
+    other.is_a?(Dslimple::Domain) && other.name == name
+  end
+  alias_method :eql, :==
 
   def to_dsl(options = {})
     <<"EOD"

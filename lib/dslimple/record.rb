@@ -5,7 +5,7 @@ class Dslimple::Record
   ALIAS_PREFIX = /\AALIAS for /
   SPF_PREFIX = /\Av=spf1 /
 
-  attr_reader :domain, :type, :name, :ttl, :priority, :content
+  attr_reader :domain, :type, :name, :id, :ttl, :priority, :content
 
   def self.cleanup_records(records)
     records = records.dup
@@ -37,6 +37,7 @@ class Dslimple::Record
     @content = content
     @ttl = options[:ttl]
     @priority = options[:priority]
+    @id = options[:id]
   end
 
   def escaped_name
@@ -63,10 +64,26 @@ class Dslimple::Record
     alias_record.ttl == ttl && content == "ALIAS for #{alias_record.content}"
   end
 
+  def ==(other)
+    other.is_a?(Dslimple::Record) && other.domain == domain && other.hash == hash
+  end
+  alias_method :eql, :==
+
+  def ===(other)
+    other.is_a?(Dslimple::Record) && other.domain == domain && other.rough_hash == rough_hash
+  end
+
+  def hash
+    "#{type}:#{name}:#{content}:#{ttl}:#{priority}"
+  end
+
+  def rough_hash
+    "#{type}:#{name}:#{content}"
+  end
+
   def to_dsl_options
     options = []
     options << "'#{escaped_name}'" unless escaped_name.empty?
-    options << "type: :#{type.to_s.downcase}"
     options << "ttl: #{ttl}" if ttl
     options << "priority: #{priority}" if priority
     options.join(', ')
@@ -74,9 +91,24 @@ class Dslimple::Record
 
   def to_dsl
     <<"EOD"
-  record #{to_dsl_options} do
+  #{type}_record #{to_dsl_options} do
     '#{escaped_content}'
   end
 EOD
+  end
+
+  def to_params
+    {
+      id: id,
+      record_type: type.to_s.upcase,
+      name: name,
+      content: content,
+      ttl: ttl,
+      prio: priority
+    }
+  end
+
+  def inspect
+    "<Dslimple::Record #{type.to_s.upcase} #{name}: #{content}>"
   end
 end
