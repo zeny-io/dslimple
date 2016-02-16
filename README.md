@@ -1,5 +1,7 @@
 # DSLimple
 
+![After DSLimple](http://zeny.io/blog/2016/02/14/dslimple-v1/after-dslimple.png)
+
 __DSLimple__ is a tool to manage [DNSimple](https://dnsimple.com/).
 
 It defines the state of DNSimple using DSL, and updates DNSimple according to DSL.
