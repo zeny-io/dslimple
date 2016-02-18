@@ -12,7 +12,7 @@ class Dslimple::CLI < Thor
   class_option :email, type: :string, aliases: %w(-e), desc: 'Your E-Mail address'
   class_option :api_token, type: :string, aliases: %w(-t), desc: 'Your API token'
   class_option :domain_token, type: :string, aliases: %w(-dt), desc: 'Your Domain API token'
-  class_option :sandbox, type: :boolean, default: ENV['DLSIMPLE_ENV'] == 'test', desc: 'Use sandbox API(at sandbox.dnsimple.com)'
+  class_option :sandbox, type: :boolean, default: ENV['DSLIMPLE_ENV'] == 'test', desc: 'Use sandbox API(at sandbox.dnsimple.com)'
   class_option :debug, type: :boolean, default: false
 
   desc 'export', 'Export domain specifications'
@@ -52,9 +52,9 @@ class Dslimple::CLI < Thor
 
   def api_client
     @api_client ||= Dnsimple::Client.new(
-      username: options[:email] || ENV['DLSIMPLE_EMAIL'],
-      api_token: options[:api_token] || ENV['DLSIMPLE_API_TOKEN'],
-      domain_api_token: options[:domain_token] || ENV['DLSIMPLE_DOMAIN_TOKEN'],
+      username: options[:email] || ENV['DSLIMPLE_EMAIL'],
+      api_token: options[:api_token] || ENV['DSLIMPLE_API_TOKEN'],
+      domain_api_token: options[:domain_token] || ENV['DSLIMPLE_DOMAIN_TOKEN'],
       api_endpoint: options[:sandbox] ? SANDBOX_API_ENDPOINT : nil,
       user_agent: USER_AGENT
     )

@@ -25,8 +25,8 @@ Or install it yourself as:
 ## Usage
 
 ```shell
-export DLSIMPLE_EMAIL="..."
-export DLSIMPLE_API_TOKEN="..."
+export DSLIMPLE_EMAIL="..."
+export DSLIMPLE_API_TOKEN="..."
 dslimple export -f Domainfile
 vi Domainfile
 dslimple apply --dry-run -f Domainfile
