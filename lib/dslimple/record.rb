@@ -100,11 +100,11 @@ EOD
   def to_params
     {
       id: id,
-      record_type: type.to_s.upcase,
+      type: type.to_s.upcase,
       name: name,
       content: content,
       ttl: ttl,
-      prio: priority
+      priority: priority
     }
   end
 

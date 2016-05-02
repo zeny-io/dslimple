@@ -2,12 +2,13 @@ require 'dslimple'
 
 class Dslimple::Domain
   attr_reader :name, :id
-  attr_accessor :api_client, :records
+  attr_accessor :api_client, :account, :records
 
-  def initialize(name, api_client, options = {})
+  def initialize(name, api_client, account, options = {})
     @name = name
     @id = options[:id]
     @api_client = api_client
+    @account = account
     @records = []
   end
 
@@ -20,8 +21,8 @@ class Dslimple::Domain
   end
 
   def fetch_records
-    api_client.domains.records(name).map do |record|
-      Dslimple::Record.new(self, record.record_type, record.name, record.content, ttl: record.ttl, priority: record.priority, id: record.id)
+    api_client.zones.all_records(account.id, name).data.map do |record|
+      Dslimple::Record.new(self, record.type, record.name, record.content, ttl: record.ttl, priority: record.priority, id: record.id)
     end
   end
 

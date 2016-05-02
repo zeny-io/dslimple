@@ -2,10 +2,11 @@ require 'pathname'
 require 'dslimple'
 
 class Dslimple::Exporter
-  attr_reader :api_client, :options, :domains
+  attr_reader :api_client, :account, :options, :domains
 
-  def initialize(api_client, options)
+  def initialize(api_client, account, options)
     @api_client = api_client
+    @account = account
     @options = options
     @domains = []
   end
@@ -21,7 +22,7 @@ class Dslimple::Exporter
   end
 
   def fetch_domains
-    domains = api_client.domains.list.map { |domain| Dslimple::Domain.new(domain.name, api_client) }
+    domains = api_client.domains.all_domains(account.id).data.map { |domain| Dslimple::Domain.new(domain.name, api_client, account) }
     domains.each(&:fetch_records!)
     domains.select! { |domain| options[:only].include?(domain.name) } unless options[:only].empty?
     domains
