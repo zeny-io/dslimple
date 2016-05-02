@@ -40,7 +40,7 @@ class Dslimple::DSL
 
   def transform
     @domains.map do |domain|
-      Dslimple::Domain.new(domain.name, nil).tap do |model|
+      Dslimple::Domain.new(domain.name, nil, nil).tap do |model|
         model.records = domain.records.map do |record|
           Dslimple::Record.new(model, record.options[:type], record.name, record.content, record.options)
         end

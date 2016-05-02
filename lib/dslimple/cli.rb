@@ -23,7 +23,7 @@ class Dslimple::CLI < Thor
   method_option :modeline, type: :boolean, default: false, aliases: %w(-m), desc: 'Export with modeline for Vim'
   method_option :soa_and_ns, type: :boolean, default: false, desc: 'Export without SOA and NS records'
   def export
-    exporter = Dslimple::Exporter.new(api_client, options)
+    exporter = Dslimple::Exporter.new(api_client, account, options)
 
     exporter.execute
   rescue => e
@@ -39,7 +39,7 @@ class Dslimple::CLI < Thor
   method_option :deletion, type: :boolean, default: true, desc: 'Delete unspecified records'
   method_option :yes, type: :boolean, default: false, aliases: %w(-y), desc: 'Do not confirm on before apply'
   def apply
-    applier = Dslimple::Applier.new(api_client, self, options)
+    applier = Dslimple::Applier.new(api_client, account, self, options)
 
     applier.execute
   rescue => e
@@ -50,12 +50,16 @@ class Dslimple::CLI < Thor
 
   private
 
+  def account
+    @account ||= api_client.identity.whoami.data[:account]
+  end
+
   def api_client
     @api_client ||= Dnsimple::Client.new(
       username: options[:email] || ENV['DSLIMPLE_EMAIL'],
-      api_token: options[:api_token] || ENV['DSLIMPLE_API_TOKEN'],
+      access_token: options[:api_token] || ENV['DSLIMPLE_API_TOKEN'] || ENV['DSLIMPLE_ACCESS_TOKEN'],
       domain_api_token: options[:domain_token] || ENV['DSLIMPLE_DOMAIN_TOKEN'],
-      api_endpoint: options[:sandbox] ? SANDBOX_API_ENDPOINT : nil,
+      base_url: options[:sandbox] ? SANDBOX_API_ENDPOINT : nil,
       user_agent: USER_AGENT
     )
   end

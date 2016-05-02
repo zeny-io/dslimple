@@ -20,7 +20,7 @@ class Dslimple::Query
 
   def to_s
     if target == :domain
-      "#{domain.name}"
+      domain.name.to_s
     else
       %(#{params[:record_type].to_s.rjust(5)} #{params[:name].to_s.rjust(10)}.#{domain.name} (#{record_options.join(', ')}) "#{params[:content]}")
     end
@@ -34,27 +34,27 @@ class Dslimple::Query
     options
   end
 
-  def execute(api_client)
-    __send__("execute_#{target}", api_client)
+  def execute(api_client, account)
+    __send__("execute_#{target}", api_client, account)
   end
 
-  def execute_domain(api_client)
+  def execute_domain(api_client, account)
     case operation
     when :addition
-      api_client.domains.create(name: domain.name)
+      api_client.registrar.register_domain(account.id, domain.name, registrant_id: account.id, auto_renew: true)
     when :deletion
-      api_client.domains.delete(domain.name)
+      api_client.domains.delete_domain(account.id, domain.name)
     end
   end
 
-  def execute_record(api_client)
+  def execute_record(api_client, account)
     case operation
     when :addition
-      api_client.domains.create_record(domain.name, params)
+      api_client.zones.create_record(account.id, domain.name, params)
     when :modification
-      api_client.domains.update_record(domain.name, params[:id], params)
+      api_client.zones.update_record(account.id, domain.name, params[:id], params)
     when :deletion
-      api_client.domains.delete_record(domain.name, params[:id])
+      api_client.zones.delete_record(account.id, domain.name, params[:id])
     end
   end
 end
