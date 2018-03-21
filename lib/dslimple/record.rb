@@ -40,11 +40,11 @@ class Dslimple::Record
   end
 
   def ===(other)
-    other.is_a?(self.class) && %i[zone name type].all? { |attr| send(attr).to_s == other.send(attr).to_s }
+    other.is_a?(self.class) && %i[zone name type content].all? { |attr| send(attr).to_s == other.send(attr).to_s }
   end
 
   def hash
-    [zone.to_s, name, type, ttl, priority, content, regions.join('|'), !!system_record].hash
+    [zone.to_s, name, type, ttl, priority, content, regions, !!system_record].hash
   end
 
   def to_dsl(options = {})
