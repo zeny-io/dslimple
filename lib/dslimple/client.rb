@@ -32,7 +32,7 @@ class Dslimple::Client < Dnsimple::Client
     while response
       zones = zones + response.data.map do |domain|
         zone = Dslimple::Zone.new(domain.name)
-        zone.records = all_records(zone.name) if with_records
+        zone.records = all_records(zone) if with_records
         zone
       end
 
@@ -45,13 +45,15 @@ class Dslimple::Client < Dnsimple::Client
     zones
   end
 
-  def all_records(domain)
-    response = zones.list_records(account_id, domain)
+  def all_records(zone)
+    response = zones.list_records(account_id, zone.name)
 
     records = []
     while response
       records = records + response.data.map do |record|
-        Dslimple::Record.new(record)
+        record = Dslimple::Record.new(record)
+        record.zone = zone.name
+        record
       end
 
       response = if response.page < response.total_pages

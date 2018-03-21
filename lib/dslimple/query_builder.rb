@@ -1,41 +1,43 @@
 require 'dslimple'
+require 'dslimple/query'
 
 class Dslimple::QueryBuilder
-  attr_reader :queries
-  attr_reader :expected_domains, :current_domains
+  attr_reader :queries, :options
+  attr_reader :expected_zones, :current_zones
   attr_reader :append_records, :change_records, :delete_records
 
-  def initialize(current_domains, expected_domains)
-    @current_domains = Hash[*current_domains.map { |domain| [domain.name, domain] }.flatten]
-    @expected_domains = Hash[*expected_domains.map { |domain| [domain.name, domain] }.flatten]
+  def initialize(current_zones, expected_zones, options = {})
+    @current_zones = Hash[*current_zones.map { |zone| [zone.name, zone] }.flatten]
+    @expected_zones = Hash[*expected_zones.map { |zone| [zone.name, zone] }.flatten]
+    @options = options
   end
 
-  def append_domains
-    @append_domains ||= expected_domains.values.reject { |domain| current_domains.key?(domain.name) }
+  def append_zones
+    @append_zones ||= expected_zones.values.reject { |zone| current_zones.key?(zone.name) }
   end
 
-  def delete_domains
-    @delete_domains ||= current_domains.values.reject { |domain| expected_domains.key?(domain.name) }
+  def delete_zones
+    @delete_zones ||= current_zones.values.reject { |zone| expected_zones.key?(zone.name) }
   end
 
   def execute
-    @append_records = append_domains.map(&:records_without_soa_ns).flatten
+    @append_records = append_zones.map { |z| z.clean_records(options[:ignore]) }.flatten
     @change_records = []
-    @delete_records = delete_domains.map(&:records_without_soa_ns).flatten
+    @delete_records = delete_zones.map { |z| z.clean_records(options[:ignore]) }.flatten
 
-    expected_domains.each_pair do |name, domain|
-      execute_records(name, domain)
+    expected_zones.each_pair do |name, zone|
+      execute_records(name, zone)
     end
 
     build_queries
   end
 
-  def execute_records(domain_name, domain)
-    current_domain = current_domains[domain_name]
-    return unless current_domain
+  def execute_records(zone_name, zone)
+    current_zone = current_zones[zone_name]
+    return unless current_zone
 
-    current_records = current_domain.records_without_soa_ns.dup
-    domain.records_without_soa_ns.each do |record|
+    current_records = current_zone.clean_records(options[:ignore]).dup
+    zone.clean_records(options[:ignore]).each do |record|
       at = current_records.index { |current| current == record }
       current_record = at ? current_records.slice!(at) : nil
       like_record = current_records.find { |current| current === record }
@@ -53,24 +55,24 @@ class Dslimple::QueryBuilder
   def build_queries
     @queries = []
 
-    append_domains.each do |domain|
-      @queries << Dslimple::Query.new(:addition, :domain, domain)
+    append_zones.each do |zone|
+      @queries << Dslimple::Query.new(:addition, :zone, zone)
     end
 
     append_records.each do |record|
-      @queries << Dslimple::Query.new(:addition, :record, record.domain, record.to_params)
+      @queries << Dslimple::Query.new(:addition, :record, record.zone, record.to_params)
     end
 
     change_records.each do |old, new|
-      @queries << Dslimple::Query.new(:modification, :record, new.domain, new.to_params.merge(id: old.id))
+      @queries << Dslimple::Query.new(:modification, :record, new.zone, new.to_params.merge(id: old.id))
     end
 
     delete_records.each do |record|
-      @queries << Dslimple::Query.new(:deletion, :record, record.domain, record.to_params)
+      @queries << Dslimple::Query.new(:deletion, :record, record.zone, record.to_params)
     end
 
-    delete_domains.each do |domain|
-      @queries << Dslimple::Query.new(:deletion, :domain, domain)
+    delete_zones.each do |zone|
+      @queries << Dslimple::Query.new(:deletion, :zone, zone)
     end
 
     @queries

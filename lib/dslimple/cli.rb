@@ -35,12 +35,14 @@ class Dslimple::CLI < Thor
   desc 'apply', 'Apply domain specifications'
   method_option :only, type: :array, default: [], aliases: %w(-o), desc: 'Specify domains for apply'
   method_option :dry_run, type: :boolean, default: false, aliases: %w(-d)
+  method_option :ignore, type: :array, default: ['system', 'child'], desc: 'Ignore record types'
   method_option :file, type: :string, default: 'Zonefile', aliases: %w(-f), desc: 'Source Zonefile path'
   method_option :addition, type: :boolean, default: true, desc: 'Allow add records'
   method_option :modification, type: :boolean, default: true, desc: 'Allow modify records'
   method_option :deletion, type: :boolean, default: true, desc: 'Allow delete records'
   method_option :yes, type: :boolean, default: false, aliases: %w(-y), desc: 'Do not confirm on before apply'
   def apply
+    require 'dslimple/applier'
     applier = Dslimple::Applier.new(client, self, options)
 
     applier.execute

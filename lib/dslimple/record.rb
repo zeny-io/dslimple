@@ -14,13 +14,17 @@ class Dslimple::Record
     @id = attrs[:id]
     @zone = attrs[:zone_id] || attrs[:zone]
     @name = attrs[:name]
-    @type = attrs[:type]
+    @type = attrs[:type].to_s.downcase.to_sym
     @ttl = attrs[:ttl]
     @parent_id = attrs[:parent_id]
     @priority = attrs[:priority]
     @content = attrs[:content]
     @regions = attrs[:regions] || DEFAULT_REGIONS
     @system_record = attrs[:system_record]
+  end
+
+  def [](key)
+    send(key)
   end
 
   def system_record?
@@ -36,11 +40,11 @@ class Dslimple::Record
   end
 
   def ===(other)
-    other.is_a?(self.class) && %i[zone name type].all? { |attr| send(attr) == other.send(attr) }
+    other.is_a?(self.class) && %i[zone name type].all? { |attr| send(attr).to_s == other.send(attr).to_s }
   end
 
   def hash
-    [zone, name, type, ttl, priority, content, regisons.join('|'), system_record].hash
+    [zone.to_s, name, type, ttl, priority, content, regions.join('|'), !!system_record].hash
   end
 
   def to_dsl(options = {})
@@ -52,6 +56,18 @@ class Dslimple::Record
     "    content #{content.inspect}",
     "  end",
   ].reject(&:empty?).join("\n")
+  end
+
+  def to_params
+    {
+      id: @id,
+      name: name,
+      type: type.to_s.upcase,
+      content: content,
+      ttl: ttl,
+      priority: priority,
+      regions: regions,
+    }
   end
 
   private

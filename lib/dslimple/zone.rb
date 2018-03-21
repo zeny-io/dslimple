@@ -22,6 +22,10 @@ class Dslimple::Zone
     [name, records.map(&:hash)].hash
   end
 
+  def to_s
+    name
+  end
+
   def to_dsl(options = {})
 <<DSL
 zone #{name.inspect} do
@@ -29,8 +33,6 @@ zone #{name.inspect} do
 end
 DSL
   end
-
-  protected
 
   def clean_records(ignores)
     ignores = [ignores].flatten.map(&:to_s)

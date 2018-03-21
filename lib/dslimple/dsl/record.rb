@@ -4,7 +4,7 @@ class Dslimple::DSL::Record
   ATTRIBUTES = %i[zone name type content ttl priority regions]
   attr_accessor *ATTRIBUTES
 
-  def initialize(name, options = {}, &block)
+  def initialize(options = {}, &block)
     options.each_pair do |key, val|
       break unless respond_to?("#{key}=")
 
@@ -13,6 +13,10 @@ class Dslimple::DSL::Record
 
     returned_content = instance_eval(&block)
     @content ||= returned_content
+  end
+
+  def [](key)
+    respond_to?(key) ? send(key) : nil
   end
 
   ATTRIBUTES.each do |attr|
