@@ -2,55 +2,55 @@ require 'pathname'
 require 'dslimple'
 
 class Dslimple::Exporter
-  attr_reader :api_client, :account, :options, :domains
+  attr_reader :client, :file, :options, :zones, :onlies
 
-  def initialize(api_client, account, options)
-    @api_client = api_client
-    @account = account
+  def initialize(client, file, options)
+    @client = client
+    @file = file
     @options = options
-    @domains = []
+    @onlies = [options[:only]].flatten.map(&:to_s).reject(&:empty?)
   end
 
   def execute
-    @domains = fetch_domains
+    @zones = client.all_zones(with_records: true)
 
     if options[:split] && options[:dir]
-      split_export(options[:dir], options[:file])
+      split_export(file, options[:dir])
     else
-      export(options[:file], domains)
+      export(file, clean_zones(zones))
     end
   end
 
-  def fetch_domains
-    domains = api_client.domains.all_domains(account.id).data.map { |domain| Dslimple::Domain.new(domain.name, api_client, account) }
-    domains.each(&:fetch_records!)
-    domains.select! { |domain| options[:only].include?(domain.name) } unless options[:only].empty?
-    domains
+  def export(fd, export_zones)
+    write_modeline(fd)
+    fd.puts export_zones.map { |zone| zone.to_dsl(options) }.join("\n")
   end
 
-  def export(file, export_domains)
-    File.open(file.to_s, 'w') do |fd|
-      write_modeline(fd)
-      fd.puts export_domains.map { |domain| domain.to_dsl(options) }.join("\n")
-    end
-  end
-
-  def split_export(dir, file)
+  def split_export(fd, dir)
     dir = Pathname.new(dir)
-    file = Pathname.new(file)
     Dir.mkdir(dir.to_s) unless dir.directory?
 
-    File.open(file.to_s, 'w') do |fd|
-      write_modeline(fd)
-      domains.each do |domain|
-        domainfile = dir.join(domain.name)
-        export(domainfile, [domain])
-        fd.puts "require '#{domainfile.relative_path_from(file.dirname)}'"
+    write_modeline(file)
+    clean_zones(zones).each do |zone|
+      zonefile = dir.join("#{zone.name}.zone")
+      File.open(zonefile, 'w') do |fd|
+        export(fd, [zone])
       end
+      fd.puts "require '#{zonefile.relative_path_from(file.dirname)}'"
     end
   end
 
   def write_modeline(fd)
     fd << "# -*- mode: ruby -*-\n# vi: set ft=ruby :\n\n" if options[:modeline]
+  end
+
+  protected
+
+  def clean_zones(zones)
+    return zones if onlies.empty?
+
+    zones.select do |zone|
+      onlies.include?(zone.name)
+    end
   end
 end

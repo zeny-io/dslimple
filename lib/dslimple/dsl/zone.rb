@@ -1,6 +1,7 @@
-require 'dslimple/dsl'
+require 'dslimple/dsl/record'
+require 'dslimple/record'
 
-class Dslimple::DSL::Domain
+class Dslimple::DSL::Zone
   attr_reader :name, :records
 
   def initialize(name, &block)
@@ -15,11 +16,12 @@ class Dslimple::DSL::Domain
       options = options.merge(name)
       name = ''
     end
+    options = options.merge(zone: @name, name: name)
 
-    @records << Dslimple::DSL::Record.new(name, options, &block)
+    @records << Dslimple::DSL::Record.new(options, &block)
   end
 
-  Dslimple::Record::RECORD_TYPES.each do |type|
+  Dslimple::Record::RECORD_TYPES.map(&:downcase).each do |type|
     class_eval(<<-EOC)
       def #{type}_record(name = {}, options = {}, &block)
         record(name, options.merge(type: :#{type}), &block)

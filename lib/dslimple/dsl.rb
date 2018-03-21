@@ -5,7 +5,7 @@ class Dslimple::DSL
   def initialize(file, context = {})
     @file = Pathname.new(file)
     @dir = @file.dirname
-    @domains = []
+    @zones = []
     @files = []
 
     @context = context
@@ -20,6 +20,8 @@ class Dslimple::DSL
       evaluate(@dir.join(path))
     elsif @dir.join("#{path}.rb").exist?
       evaluate(@dir.join("#{path}.rb"))
+    elsif @dir.join("#{path}.zone").exist?
+      evaluate(@dir.join("#{path}.zone"))
     else
       Kernel.require(path)
     end
@@ -34,15 +36,15 @@ class Dslimple::DSL
     raise Dslimple::DSL::Error, "#{e.class}: #{e.message}", cleanup_backtrace(e.backtrace)
   end
 
-  def domain(name, &block)
-    @domains << Dslimple::DSL::Domain.new(name, &block)
+  def zone(name, &block)
+    @zones << Dslimple::DSL::Zone.new(name, &block)
   end
 
   def transform
-    @domains.map do |domain|
-      Dslimple::Domain.new(domain.name, nil, nil).tap do |model|
-        model.records = domain.records.map do |record|
-          Dslimple::Record.new(model, record.options[:type], record.name, record.content, record.options)
+    @zones.map do |zone|
+      Dslimple::Zone.new(zone.name).tap do |model|
+        model.records = zone.records.map do |record|
+          Dslimple::Record.new(record)
         end
       end
     end
@@ -60,6 +62,6 @@ class Dslimple::DSL
   end
 end
 
-require 'dslimple/dsl/domain'
+require 'dslimple/dsl/zone'
 require 'dslimple/dsl/record'
 require 'dslimple/dsl/error'
