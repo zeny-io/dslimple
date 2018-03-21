@@ -1,12 +1,12 @@
 require 'dslimple'
 
 class Dslimple::Query
-  attr_reader :operation, :target, :domain, :params
+  attr_reader :operation, :target, :zone, :params
 
-  def initialize(operation, target, domain, params = {})
+  def initialize(operation, target, zone, params = {})
     @operation = operation
     @target = target
-    @domain = domain
+    @zone = zone
     @params = params
   end
 
@@ -19,17 +19,17 @@ class Dslimple::Query
   end
 
   def to_s
-    if target == :domain
-      domain.name.to_s
+    if target == :zone
+      zone.to_s
     else
-      %(#{params[:record_type].to_s.rjust(5)} #{params[:name].to_s.rjust(10)}.#{domain.name} (#{record_options.join(', ')}) "#{params[:content]}")
+      %(#{params[:type].to_s.rjust(5)} #{params[:name].to_s.rjust(10)}.#{zone.to_s} (#{record_options.join(', ')}) "#{params[:content]}")
     end
   end
 
   def record_options
     options = []
     params.each_pair do |k, v|
-      options << "#{k}: #{v}" if %i(ttl prio).include?(k) && v
+      options << "#{k}: #{v}" if %i(ttl priority regions).include?(k) && v
     end
     options
   end
@@ -38,23 +38,25 @@ class Dslimple::Query
     __send__("execute_#{target}", api_client, account)
   end
 
-  def execute_domain(api_client, account)
+  def execute_zone(api_client, account_id)
     case operation
     when :addition
-      api_client.registrar.register_domain(account.id, domain.name, registrant_id: account.id, auto_renew: true)
+      # TODO: Support registration
+      # api_client.registrar.register_zone(account_id, zone, registrant_id: account.id, auto_renew: true)
     when :deletion
-      api_client.domains.delete_domain(account.id, domain.name)
+      # TODO: Support deletion
+      # api_client.zones.delete_zone(account_id, zone)
     end
   end
 
-  def execute_record(api_client, account)
+  def execute_record(api_client, account_id)
     case operation
     when :addition
-      api_client.zones.create_record(account.id, domain.name, params)
+      api_client.zones.create_record(account_id, zone, params)
     when :modification
-      api_client.zones.update_record(account.id, domain.name, params[:id], params)
+      api_client.zones.update_record(account_id, zone, params[:id], params)
     when :deletion
-      api_client.zones.delete_record(account.id, domain.name, params[:id])
+      api_client.zones.delete_record(account_id, zone, params[:id])
     end
   end
 end

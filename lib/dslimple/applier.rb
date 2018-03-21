@@ -1,5 +1,5 @@
 require 'dslimple'
-require 'pp'
+require 'dslimple/query_builder'
 
 class Dslimple::Applier
   OPERATION_COLORS = {
@@ -8,11 +8,10 @@ class Dslimple::Applier
     deletion: :red
   }.freeze
 
-  attr_reader :api_client, :account, :shell, :options
+  attr_reader :client, :shell, :options
 
-  def initialize(api_client, account, shell, options = {})
-    @api_client = api_client
-    @account = account
+  def initialize(client, shell, options = {})
+    @client = client
     @shell = shell
     @options = options
   end
@@ -22,10 +21,10 @@ class Dslimple::Applier
 
     dsl.execute
 
-    expected_domains = dsl.transform
-    expected_domains.select! { |domain| options[:only].include?(domain.name) } if options[:only].any?
+    expected_zones = dsl.transform
+    expected_zones.select! { |zone| options[:only].include?(zone.name) } unless options[:only].empty?
 
-    @buildler = Dslimple::QueryBuilder.new(fetch_domains, expected_domains)
+    @buildler = Dslimple::QueryBuilder.new(fetch_zones, expected_zones, options)
     @buildler.execute
     queries = @buildler.filtered_queries(options)
 
@@ -41,11 +40,10 @@ class Dslimple::Applier
     apply(queries)
   end
 
-  def fetch_domains
-    domains = api_client.domains.all_domains(account.id).data.map { |domain| Dslimple::Domain.new(domain.name, api_client, account, id: domain.id) }
-    domains.each(&:fetch_records!)
-    domains.select! { |domain| options[:only].include?(domain.name) } if options[:only].any?
-    domains
+  def fetch_zones
+    zones = client.all_zones(with_records: true)
+    zones.select! { |zone| options[:only].include?(zone.name) } if options[:only].any?
+    zones
   end
 
   def show_plan(queries)
@@ -59,7 +57,7 @@ class Dslimple::Applier
     shell.say('Apply', :bold)
     queries.each do |query|
       show_query(query)
-      query.execute(api_client, account)
+      query.execute(client, client.account_id)
     end
   end
 

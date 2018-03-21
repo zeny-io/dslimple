@@ -2,30 +2,32 @@ require 'thor'
 require 'dnsimple'
 require 'json'
 require 'dslimple'
+require 'dslimple/dsl'
+require 'dslimple/client'
 
 class Dslimple::CLI < Thor
   include Thor::Actions
 
-  SANDBOX_API_ENDPOINT = 'https://api.sandbox.dnsimple.com'.freeze
-  USER_AGENT = "DSLimple: Simple CLI DNSimple client(v#{Dslimple::VERSION})".freeze
-
-  class_option :email, type: :string, aliases: %w(-e), desc: 'Your E-Mail address'
-  class_option :api_token, type: :string, aliases: %w(-t), desc: 'Your API token'
-  class_option :domain_token, type: :string, aliases: %w(-dt), desc: 'Your Domain API token'
+  class_option :access_token, type: :string, aliases: %w(-a), desc: 'Your API token'
   class_option :sandbox, type: :boolean, default: ENV['DSLIMPLE_ENV'] == 'test', desc: 'Use sandbox API(at sandbox.dnsimple.com)'
   class_option :debug, type: :boolean, default: false
 
   desc 'export', 'Export domain specifications'
   method_option :only, type: :array, default: [], aliases: %w(-o), desc: 'Specify domains for export'
-  method_option :file, type: :string, default: 'Domainfile', aliases: %w(-f), desc: 'Export Domainfile path'
-  method_option :dir, type: :string, default: './domainfiles', aliases: %w(-d), desc: 'Export directory path for split'
+  method_option :file, type: :string, default: 'Zonefile', aliases: %w(-f), desc: 'Export zonefile path(- is stdout)'
+  method_option :dir, type: :string, default: './zonefiles', aliases: %w(-d), desc: 'Export directory path for split'
   method_option :split, type: :boolean, default: false, aliases: %w(-s), desc: 'Export with split by domains'
   method_option :modeline, type: :boolean, default: false, aliases: %w(-m), desc: 'Export with modeline for Vim'
-  method_option :soa_and_ns, type: :boolean, default: false, desc: 'Export without SOA and NS records'
+  method_option :ignore, type: :array, default: ['system', 'child'], desc: 'Ignore record types'
   def export
-    exporter = Dslimple::Exporter.new(api_client, account, options)
+    require 'dslimple/exporter'
+    fd = options[:file] == '-' ? STDOUT : File.open(options[:file].to_s, 'w')
+
+    exporter = Dslimple::Exporter.new(client, fd, options)
 
     exporter.execute
+
+    fd.close
   rescue => e
     rescue_from(e)
   end
@@ -33,13 +35,15 @@ class Dslimple::CLI < Thor
   desc 'apply', 'Apply domain specifications'
   method_option :only, type: :array, default: [], aliases: %w(-o), desc: 'Specify domains for apply'
   method_option :dry_run, type: :boolean, default: false, aliases: %w(-d)
-  method_option :file, type: :string, default: 'Domainfile', aliases: %w(-f), desc: 'Source Domainfile path'
-  method_option :addition, type: :boolean, default: true, desc: 'Add specified records'
-  method_option :modification, type: :boolean, default: true, desc: 'Modify specified records'
-  method_option :deletion, type: :boolean, default: true, desc: 'Delete unspecified records'
+  method_option :ignore, type: :array, default: ['system', 'child'], desc: 'Ignore record types'
+  method_option :file, type: :string, default: 'Zonefile', aliases: %w(-f), desc: 'Source Zonefile path'
+  method_option :addition, type: :boolean, default: true, desc: 'Allow add records'
+  method_option :modification, type: :boolean, default: true, desc: 'Allow modify records'
+  method_option :deletion, type: :boolean, default: true, desc: 'Allow delete records'
   method_option :yes, type: :boolean, default: false, aliases: %w(-y), desc: 'Do not confirm on before apply'
   def apply
-    applier = Dslimple::Applier.new(api_client, account, self, options)
+    require 'dslimple/applier'
+    applier = Dslimple::Applier.new(client, self, options)
 
     applier.execute
   rescue => e
@@ -50,17 +54,10 @@ class Dslimple::CLI < Thor
 
   private
 
-  def account
-    @account ||= api_client.identity.whoami.data[:account]
-  end
-
-  def api_client
-    @api_client ||= Dnsimple::Client.new(
-      username: options[:email] || ENV['DSLIMPLE_EMAIL'],
+  def client
+    @aclient ||= Dslimple::Client.new(
       access_token: options[:api_token] || ENV['DSLIMPLE_API_TOKEN'] || ENV['DSLIMPLE_ACCESS_TOKEN'],
-      domain_api_token: options[:domain_token] || ENV['DSLIMPLE_DOMAIN_TOKEN'],
-      base_url: options[:sandbox] ? SANDBOX_API_ENDPOINT : nil,
-      user_agent: USER_AGENT
+      sandbox: options[:sandbox]
     )
   end
 

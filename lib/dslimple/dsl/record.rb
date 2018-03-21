@@ -1,25 +1,39 @@
 require 'dslimple/dsl'
 
 class Dslimple::DSL::Record
-  attr_reader :name, :content, :options
+  ATTRIBUTES = %i[zone name type content ttl priority regions]
+  attr_accessor *ATTRIBUTES
 
-  def initialize(name, options = {}, &block)
-    @name = name
-    @options = options
+  def initialize(options = {}, &block)
+    options.each_pair do |key, val|
+      break unless respond_to?("#{key}=")
+
+      send("#{key}=", val)
+    end
 
     returned_content = instance_eval(&block)
     @content ||= returned_content
   end
 
-  def priority(n)
-    @options[:priority] = n.to_s.to_i
+  def [](key)
+    respond_to?(key) ? send(key) : nil
   end
 
-  def ttl(n)
-    @options[:ttl] = n.to_s.to_i
+  ATTRIBUTES.each do |attr|
+    define_method(attr) do |v = nil|
+      v ? instance_variable_set("@#{attr}", v) : instance_variable_get("@#{attr}")
+    end
+
+    define_method("#{attr}=") do |v|
+      instance_variable_set("@#{attr}", v)
+    end
   end
 
-  def content(c = nil)
-    c ? @content = c : @content
+  def region(v = nil)
+    self.regions = [v].flatten
+  end
+
+  def region=(v)
+    self.regions = [v].flatten
   end
 end

@@ -1,114 +1,82 @@
 require 'dslimple'
+require 'dnsimple'
+require 'dslimple'
 
 class Dslimple::Record
-  RECORD_TYPES = %i(a alias cname mx spf url txt ns srv naptr ptr aaaa sshfp hinfo pool).freeze
-  ALIAS_PREFIX = /\AALIAS for /
-  SPF_PREFIX = /\Av=spf1 /
+  RECORD_TYPES = %w[A ALIAS CNAME MX SPF URL TXT NS SRV NAPTR PTR AAAA SSHFP HINFO POOL CAA]
+  DEFAULT_REGIONS = ['global']
 
-  attr_reader :domain, :type, :name, :id, :ttl, :priority, :content
+  attr_accessor :id, :zone, :name, :type, :ttl, :priority, :content, :regions, :system_record
 
-  def self.cleanup_records(records)
-    records = records.dup
-    alias_records = records.select(&:alias?)
-    spf_records = records.select(&:spf?)
-    txt_records = records.select { |record| record.like_spf? || record.like_alias? }
+  def initialize(attrs = {})
+    attrs = normalize_attrs(attrs) if attrs.is_a?(Dnsimple::Struct::ZoneRecord)
 
-    txt_records.each do |record|
-      reject = record.like_spf? ? spf_records.any? { |r| record.eql_spf?(r) } : alias_records.any? { |r| record.eql_alias?(r) }
-
-      records.delete(record) if reject
-    end
-
-    records
+    @id = attrs[:id]
+    @zone = attrs[:zone_id] || attrs[:zone]
+    @name = attrs[:name]
+    @type = attrs[:type].to_s.downcase.to_sym
+    @ttl = attrs[:ttl]
+    @parent_id = attrs[:parent_id]
+    @priority = attrs[:priority]
+    @content = attrs[:content]
+    @regions = attrs[:regions] || DEFAULT_REGIONS
+    @system_record = attrs[:system_record]
   end
 
-  RECORD_TYPES.each do |type|
-    class_eval(<<-EOC)
-      def #{type}?
-        type == :#{type}
-      end
-    EOC
+  def [](key)
+    send(key)
   end
 
-  def initialize(domain, type, name, content, options = {})
-    @domain = domain
-    @type = type.to_s.downcase.to_sym
-    @name = name
-    @content = content
-    @ttl = options[:ttl]
-    @priority = options[:priority]
-    @id = options[:id]
+  def system_record?
+    @system_record == true
   end
 
-  def escaped_name
-    Dslimple.escape_single_quote(name)
-  end
-
-  def escaped_content
-    Dslimple.escape_single_quote(content)
-  end
-
-  def like_spf?
-    txt? && content.match(SPF_PREFIX)
-  end
-
-  def like_alias?
-    txt? && content.match(ALIAS_PREFIX)
-  end
-
-  def eql_spf?(spf_record)
-    spf_record.ttl == ttl && spf_record.content == content
-  end
-
-  def eql_alias?(alias_record)
-    alias_record.ttl == ttl && content == "ALIAS for #{alias_record.content}"
+  def child_record?
+    !@parent_id.nil?
   end
 
   def ==(other)
-    other.is_a?(Dslimple::Record) && other.domain == domain && other.hash == hash
+    other.is_a?(self.class) && hash == other.hash
   end
-  alias_method :eql, :==
 
   def ===(other)
-    other.is_a?(Dslimple::Record) && other.domain == domain && other.rough_hash == rough_hash
+    other.is_a?(self.class) && %i[zone name type].all? { |attr| send(attr).to_s == other.send(attr).to_s }
   end
 
   def hash
-    "#{type}:#{name}:#{content}:#{ttl}:#{priority}"
+    [zone.to_s, name, type, ttl, priority, content, regions.join('|'), !!system_record].hash
   end
 
-  def rough_hash
-    "#{type}:#{name}:#{content}"
-  end
-
-  def to_dsl_options
-    options = []
-    options << "'#{escaped_name}'" unless escaped_name.empty?
-    options << "ttl: #{ttl}" if ttl
-    options << "priority: #{priority}" if priority
-    options.join(', ')
-  end
-
-  def to_dsl
-    <<"EOD"
-  #{type}_record #{to_dsl_options} do
-    '#{escaped_content}'
-  end
-EOD
+  def to_dsl(options = {})
+  [
+    "  #{type.to_s.downcase}_record(#{name.inspect}) do",
+    priority ? "    priority #{priority.inspect}" : "",
+    ttl ? "    ttl #{ttl}" : "",
+    regions != DEFAULT_REGIONS ? "    regions #{regions.inspect}" : "",
+    "    content #{content.inspect}",
+    "  end",
+  ].reject(&:empty?).join("\n")
   end
 
   def to_params
     {
-      id: id,
-      type: type.to_s.upcase,
+      id: @id,
       name: name,
+      type: type.to_s.upcase,
       content: content,
       ttl: ttl,
-      priority: priority
+      priority: priority,
+      regions: regions,
     }
   end
 
-  def inspect
-    "<Dslimple::Record #{type.to_s.upcase} #{name}: #{content}>"
+  private
+
+  def normalize_attrs(record)
+    attrs = {}
+    record.instance_variables.each do |var|
+      attrs[:"#{var.to_s.sub(/^@/, '')}"] = record.instance_variable_get(var)
+    end
+    attrs
   end
 end
