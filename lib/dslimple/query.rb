@@ -52,11 +52,11 @@ class Dslimple::Query
   def execute_record(api_client, account_id)
     case operation
     when :addition
-      api_client.zones.create_record(account_id, zone, params)
+      api_client.zones.create_zone_record(account_id, zone, params)
     when :modification
-      api_client.zones.update_record(account_id, zone, params[:id], params)
+      api_client.zones.update_zone_record(account_id, zone, params[:id], params)
     when :deletion
-      api_client.zones.delete_record(account_id, zone, params[:id])
+      api_client.zones.delete_zone_record(account_id, zone, params[:id])
     end
   end
 end
