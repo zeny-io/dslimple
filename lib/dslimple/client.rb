@@ -46,13 +46,14 @@ class Dslimple::Client < Dnsimple::Client
   end
 
   def all_records(zone)
-    response = zones.list_records(account_id, zone.name)
+    zone = zone.name if zone.is_a?(Dslimple::Zone)
+    response = zones.list_zone_records(account_id, zone)
 
     records = []
     while response
       records = records + response.data.map do |record|
         record = Dslimple::Record.new(record)
-        record.zone = zone.name
+        record.zone = zone
         record
       end
 
