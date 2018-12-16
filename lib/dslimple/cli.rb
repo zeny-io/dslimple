@@ -68,7 +68,7 @@ class Dslimple::CLI < Thor
     when Dnsimple::AuthenticationError
       error(set_color(e.message, :red, :bold))
     when Dnsimple::RequestError
-      error(set_color("#{e.message}: #{JSON.parse(e.response.body)['message']}", :yellow, :bold))
+      error(set_color("#{e.message}: #{JSON.parse(e.http_response.body)['message']}", :yellow, :bold))
     when Dslimple::DSL::Error
       error(set_color(e.message, :yellow, :bold))
     else
