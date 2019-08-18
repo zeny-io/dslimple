@@ -36,7 +36,7 @@ class Dslimple::Exporter
       File.open(zonefile, 'w') do |fd|
         export(fd, [zone])
       end
-      fd.puts "require '#{zonefile.relative_path_from(file.dirname)}'"
+      fd.puts "require '#{zonefile.relative_path_from(Pathname.new(fd.path).dirname)}'"
     end
   end
 
