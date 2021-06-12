@@ -1,6 +1,5 @@
 require 'dslimple'
 require 'dnsimple'
-require 'dslimple'
 
 class Dslimple::Record
   RECORD_TYPES = %w[A ALIAS CNAME MX SPF URL TXT NS SRV NAPTR PTR AAAA SSHFP HINFO POOL CAA]
@@ -59,7 +58,7 @@ class Dslimple::Record
   end
 
   def to_params
-    {
+    params = {
       id: @id,
       name: name,
       type: type.to_s.upcase,
@@ -68,6 +67,9 @@ class Dslimple::Record
       priority: priority,
       regions: regions,
     }
+    params.delete(:regions)
+
+    params
   end
 
   private
